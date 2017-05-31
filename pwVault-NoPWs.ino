@@ -32,15 +32,12 @@ const short pinCode[]={2,3,4,4,1};
 
 const static char siteName[][NAMLEN] PROGMEM={
   "Starbucks",
-  "Sleepnumber",
   "Adafruit",
   "Mouser",
   "Particle",
   "World of Tanks",
   "BangGood",
   "Amazon",
-  "Captl One Web",
-  "Captl One03/16",
   "Pax Enforcer",
   "Cut Splice",
   "Netflix",
@@ -49,17 +46,12 @@ const static char siteName[][NAMLEN] PROGMEM={
   "LinkedIn",
   "Flixster",
   "FitBit Dashboa",
-  "Verizon Router",
-  "LinkSys Router",
-  "MyVerizon Web",
-  "Paypal",
   "BU Alumni",
   "Mass Pike",
   "LOTRO",
   "NewEgg",
   "Steam",
   "Barnes & Noble",
-  "Social Securit",
   "Twitch",
   "Filters-Now",
   "IFTTT",
@@ -72,15 +64,12 @@ const static char siteName[][NAMLEN] PROGMEM={
 
 const static char* userName[]={
   "Starbucks-UserN",
-  "Sleepnumber-UserN",
   "Adafruit-UserN",
   "Mouser-UserN",
   "Particle-UserN",
   "World of Tanks-UserN",
   "BangGood-UserN",
   "Amazon-UserN",
-  "Captl One Web-UserN",
-  "Captl One-CardNum",
   "Pax Enforcer-UserN",
   "Cut Splice-UserN",
   "Netflix-UserN",
@@ -89,17 +78,12 @@ const static char* userName[]={
   "LinkedIn-UserN",
   "Flixster-UserN",
   "FitBit Dashboa-UserN",
-  "Verizon Router-UserN",
-  "LinkSys Router-UserN",
-  "MyVerizon Web-UserN",
-  "Paypal-UserN",
   "BU Alumni-UserN",
   "Mass Pike-UserN",
   "LOTRO-UserN",
   "NewEgg-UserN",
   "Steam-UserN",
   "Barnes & Noble-UserN",
-  "Social Securit-UserN",
   "Twitch-UserN",
   "Filters-Now-UserN",
   "IFTTT-UserN",
@@ -112,15 +96,12 @@ const static char* userName[]={
 
 const static char passWord[][PASLEN] PROGMEM={
   "StarbucksPW",
-  "SleepnumberPW",
   "AdafruitPW",
   "MouserPW",
   "ParticlePW",
   "World of TanksPW",
   "BangGoodPW",
   "AmazonPW",
-  "CaptlOneWebPW",
-  "CaptlOneSecCd",
   "PaxEnforcerPW",
   "CutSplicePW",
   "NetflixPW",
@@ -129,17 +110,12 @@ const static char passWord[][PASLEN] PROGMEM={
   "LinkedInPW",
   "FlixsterPW",
   "FitBitDashboaPW",
-  "VerizonRouterPW",
-  "LinkSysRouterPW",
-  "MyVerizonWebPW",
-  "PaypalPW",
   "BUAlumniPW",
   "MassPikePW",
   "LOTROPW",
   "NewEggPW",
   "SteamPW",
   "Barnes&NoblePW",
-  "SocialSecuritPW",
   "TwitchPW",
   "Filters-NowPW",
   "IFTTTPW",
@@ -354,7 +330,7 @@ void loop() {
         for (short k=0;k<PASLEN-1;k++) {
           myChar = pgm_read_byte_near(passWord[indx] + k);
           if (myChar != '\0') Keyboard.print(myChar);
-          delay((k % 3) * 25);  // make the password entry look a little more human (slower/random), required by Starbucks.com
+          delay((k % 3) * 25);  // make the password entry look a little more human (slower/random), required by Starbucks.com???
         }
         Keyboard.end();
         
@@ -368,25 +344,6 @@ void loop() {
       if (pinDigit == 4) bothSent = true;
 
   }
-  
-/*  
-  while (digitalRead(BUTTON1));
-  delay(100);
-  while (!digitalRead(BUTTON1));  
-
-  Keyboard.begin();
-  Keyboard.print("davidhunter@rocketmail.com");
-  Keyboard.end();
-
-  while (digitalRead(BUTTON1));
-  delay(100);
-  while (!digitalRead(BUTTON1));  
-  
-  Keyboard.begin();
-  Keyboard.print("xxxxxxxx");
-  Keyboard.end();
-*/
-
-  
+    
 }
 
