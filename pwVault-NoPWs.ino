@@ -1,4 +1,5 @@
-#include "Keyboard.h"
+// #include "Keyboard.h"
+#include <ProTrinketKeyboard.h>
 #include "Wire.h"
 #include <SPI.h>
 #include <Adafruit_GFX.h>
@@ -24,30 +25,36 @@ Adafruit_PCD8544 lcd = Adafruit_PCD8544(5, 4, 3);
 // and written to during SPI transfer.  Be careful sharing these pins!
 
 #define NAMLEN 15
-#define PASLEN 18
+#define PASLEN 31
+#define UNMLEN 31
+#define NSITES 31
 
-const short BUTTON1=8,BUTTON2=9,BUTTON3=10,BUTTON4=7;
+const byte BUTTON1=8,BUTTON2=9,BUTTON3=0,BUTTON4=6;  // Button 4,3 changed from pin 7,10 to 6,0 for pro trinket
 
-const short pinCode[]={2,3,4,4,1};
+const byte pinCode[]={3,2,2,4,1};
+
 
 const static char siteName[][NAMLEN] PROGMEM={
   "Starbucks",
+  "Sleepnumber",
   "Adafruit",
   "Mouser",
   "Particle",
   "World of Tanks",
   "BangGood",
   "Amazon",
+  "Credit Card",
   "Pax Enforcer",
   "Cut Splice",
   "Netflix",
-  "Paitent Gatewa",
   "Twitter",
   "LinkedIn",
   "Flixster",
   "FitBit Dashboa",
-  "BU Alumni",
-  "Mass Pike",
+  "Router",
+  "Paypal",
+  "Alumni",
+  "Fast Lane",
   "LOTRO",
   "NewEgg",
   "Steam",
@@ -57,29 +64,32 @@ const static char siteName[][NAMLEN] PROGMEM={
   "IFTTT",
   "SWGEMU",
   "goodreads",
-  "Troop 17",
   "US Postal Serv",
   "Facebook"
 };
 
-const static char* userName[]={
+// const static char* userName[]={
+const static char userName[][UNMLEN] PROGMEM={
   "Starbucks-UserN",
+  "Sleepnumber-UserN",
   "Adafruit-UserN",
   "Mouser-UserN",
   "Particle-UserN",
   "World of Tanks-UserN",
   "BangGood-UserN",
   "Amazon-UserN",
+  "Credit Card-UserN",
   "Pax Enforcer-UserN",
   "Cut Splice-UserN",
   "Netflix-UserN",
-  "Paitent Gatewa-UserN",
   "Twitter-UserN",
   "LinkedIn-UserN",
   "Flixster-UserN",
   "FitBit Dashboa-UserN",
-  "BU Alumni-UserN",
-  "Mass Pike-UserN",
+  "Router-UserN",
+  "Paypal-UserN",
+  "Alumni-UserN",
+  "Fast Lane-UserN",
   "LOTRO-UserN",
   "NewEgg-UserN",
   "Steam-UserN",
@@ -89,29 +99,31 @@ const static char* userName[]={
   "IFTTT-UserN",
   "SWGEMU-UserN",
   "goodreads-UserN",
-  "Troop 17-UserN",
   "US Postal Serv-UserN",
   "Facebook"
 };
 
 const static char passWord[][PASLEN] PROGMEM={
   "StarbucksPW",
+  "SleepnumberPW",
   "AdafruitPW",
   "MouserPW",
   "ParticlePW",
-  "World of TanksPW",
+  "WorldofTanksPW",
   "BangGoodPW",
   "AmazonPW",
+  "CreditCardPW",
   "PaxEnforcerPW",
   "CutSplicePW",
   "NetflixPW",
-  "PaitentGatewaPW",
   "TwitterPW",
   "LinkedInPW",
   "FlixsterPW",
   "FitBitDashboaPW",
-  "BUAlumniPW",
-  "MassPikePW",
+  "RouterPW",
+  "PaypalPW",
+  "AlumniPW",
+  "FastLanePW",
   "LOTROPW",
   "NewEggPW",
   "SteamPW",
@@ -121,16 +133,19 @@ const static char passWord[][PASLEN] PROGMEM={
   "IFTTTPW",
   "SWGEMUPW",
   "goodreadsPW",
-  "Troop17PW",
   "USPostalServPW",
   "FacebookPW"
 };
 
-short pinDigit;
+
+byte pinDigit;
 bool pinMatch,pinError,userNameSent,selected,bothSent,newKeyNeeded,screenScrolled,sendTab;
-int indx;
+short indx;
 unsigned long scrollTimeStart,timeOutEnd,timeOutDelay=300000;
 char myChar;
+uint8_t testS;
+byte srtPointer[NSITES],newSrtPoint[NSITES];
+byte counts[128];
 
 void fillScreen(short indx,short nLines) {
   short iOffset,testLen;
@@ -147,7 +162,7 @@ void fillScreen(short indx,short nLines) {
     if (iOffset < 0) iOffset = iOffset + sizeof(siteName)/NAMLEN;
     
     for (short k=0;k<NAMLEN-1;k++) {
-      myChar = pgm_read_byte_near(siteName[iOffset] + k);
+      myChar = pgm_read_byte_near(siteName[srtPointer[iOffset]] + k);
       if (myChar != '\0') lcd.print(myChar);
     }
     lcd.println(" ");
@@ -157,7 +172,23 @@ void fillScreen(short indx,short nLines) {
   lcd.setTextColor(BLACK);
   return;
 }
-  
+
+void pollDelay(int tDelay) {
+
+  // the poll function must be called at least once every 10 ms
+  // or cause a keystroke
+  // if it is not, then the computer may think that the device
+  // has stopped working, and give errors
+
+  for (int i=0; i<(tDelay/5); i++) {
+    TrinketKeyboard.poll();
+    delay(5);
+  }
+  TrinketKeyboard.poll();
+  delay(tDelay%5);
+  TrinketKeyboard.poll();
+  return;
+}
 
 void setup() {
   // put your setup code here, to run once:
@@ -179,11 +210,197 @@ void setup() {
   lcd.setTextColor(BLACK);
   lcd.setTextWrap(false);
 
+  lcd.clearDisplay();
+  lcd.display();
+  lcd.setCursor(0,0);
+  lcd.println("Attempting");
+  lcd.println("to");
+  lcd.println("Initalize...");
+  lcd.display();
+  TrinketKeyboard.begin();
+  while (((int)TrinketKeyboard.isConnected()) == 0) {
+    TrinketKeyboard.poll();
+//    delay(100);
+  }
+
+  lcd.clearDisplay();
+  lcd.display();
+  lcd.setCursor(0,0);
+  lcd.println("Sorting Names");
+  lcd.display();
+  TrinketKeyboard.poll();
+  pollDelay(1000);
+
+  for (indx = 0; indx < NSITES; indx++) {
+    srtPointer[indx] = indx;
+  }
+  TrinketKeyboard.poll();
+
+  for (short decPlace = NAMLEN-2; decPlace >= 0; decPlace--) {
+    for (short i = 0; i<128; i++) {
+      counts[i] = -1;
+    }
+    TrinketKeyboard.poll();
+
+    for (indx = 0; indx < NSITES; indx++) {
+      for (short i = pgm_read_byte_near(siteName[indx] + decPlace); i<128; i++) {
+//        if (pgm_read_byte_near(siteName[indx] + decPlace) <= 0 && i<32) {
+//        } else {
+          counts[i]+=1;
+//        }
+      }
+      TrinketKeyboard.poll();
+    }
+
+/*
+    lcd.clearDisplay();
+    lcd.setCursor(0,0);
+    TrinketKeyboard.poll();
+
+    for (short indx=0; indx<25; indx++) {
+
+      if (indx % 6 == 0 && indx != 0) {
+        lcd.display();
+        TrinketKeyboard.poll();
+        pollDelay(20000);
+
+        lcd.clearDisplay();
+        lcd.display();
+        TrinketKeyboard.poll();
+        pollDelay(1000);
+        lcd.setCursor(0,0);
+    }
+      
+      lcd.print(counts[indx*5]);
+      lcd.print(" ");
+      lcd.print(counts[indx*5+1]);
+      lcd.print(" ");
+      lcd.print(counts[indx*5+2]);
+      lcd.print(" ");
+      lcd.print(counts[indx*5+3]);
+      lcd.print(" ");
+      lcd.println(counts[indx*5+4]);
+    }
+
+    indx = 25;
+    lcd.print(counts[indx*5]);
+    lcd.print(" ");
+    lcd.print(counts[indx*5+1]);
+    lcd.print(" ");
+    lcd.print(counts[indx*5+2]);
+    
+    lcd.display();
+    TrinketKeyboard.poll();
+    pollDelay(20000);
+*/
+
+    for (short i = NSITES-1; i>=0; i--) {
+      indx = pgm_read_byte_near(siteName[srtPointer[i]] + decPlace);
+      if (indx < 0) indx = 0;
+      if (indx > 127) indx = 127;
+      if (counts[indx] > NSITES-1) counts[indx] = NSITES-1;
+      if (counts[indx] < 0) counts[indx] = 0;
+      newSrtPoint[counts[indx]] = srtPointer[i];
+/*
+      if (i == 1) {
+        lcd.clearDisplay();
+        lcd.display();
+        TrinketKeyboard.poll();
+        lcd.setCursor(0,0);
+
+
+        lcd.print("Place: ");
+        lcd.println(decPlace);
+        for (short k=0;k<NAMLEN-1;k++) {
+          myChar = pgm_read_byte_near(siteName[srtPointer[i]] + k);
+          if (myChar != '\0') lcd.print(myChar);
+        }
+        lcd.println(" ");
+        lcd.print("Char: ");
+        myChar = pgm_read_byte_near(siteName[srtPointer[i]] + decPlace);
+        lcd.print(myChar);
+        lcd.print(" ");
+        lcd.println(pgm_read_byte_near(siteName[srtPointer[i]] + decPlace));
+        lcd.print("indx: ");
+        lcd.println(indx);
+        lcd.println("counts[indx]: ");
+        lcd.println(counts[indx]);
+        lcd.display();
+        pollDelay(15000);
+      }
+*/  
+      
+      counts[indx] -= 1;
+    }
+    TrinketKeyboard.poll();
+
+    for (short indx =0; indx<NSITES; indx++) {
+      srtPointer[indx] = newSrtPoint[indx];
+    }
+    TrinketKeyboard.poll();
+
+/*
+    lcd.clearDisplay();
+    lcd.display();
+    TrinketKeyboard.poll();
+
+    lcd.setCursor(0,0);
+    for (short indx=0; indx<6; indx++) {
+      lcd.print(srtPointer[indx*5]);
+      lcd.print(" ");
+      lcd.print(srtPointer[indx*5+1]);
+      lcd.print(" ");
+      lcd.print(srtPointer[indx*5+2]);
+      lcd.print(" ");
+      lcd.print(srtPointer[indx*5+3]);
+      lcd.print(" ");
+      lcd.println(srtPointer[indx*5+4]);
+    }
+    lcd.display();
+    TrinketKeyboard.poll();
+    pollDelay(15000);
+*/
+
+  }
+
+/*
+  indx = 0;
+  while (true) {
+    lcd.clearDisplay();
+    lcd.display();
+    TrinketKeyboard.poll();
+
+    lcd.setCursor(0,0);
+    for (short i=0; i<6; i++) {
+      lcd.print(srtPointer[indx*5]);
+      lcd.print(" ");
+      lcd.print(srtPointer[indx*5+1]);
+      lcd.print(" ");
+      lcd.print(srtPointer[indx*5+2]);
+      lcd.print(" ");
+      lcd.print(srtPointer[indx*5+3]);
+      lcd.print(" ");
+      lcd.println(srtPointer[indx*5+4]);
+      indx += 1;
+      if (indx > 14) {
+        indx = 0;
+        break;
+      }
+    }
+//    indx += 24;
+    
+    lcd.display();
+    TrinketKeyboard.poll();
+    pollDelay(10000);
+  }
+*/
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-
+  TrinketKeyboard.poll();
+  
   pinMatch = false;
   while (!pinMatch) {
 
@@ -191,31 +408,55 @@ void loop() {
     lcd.display();
     lcd.setCursor(0,0);
     lcd.println("    LOCKED");
+//    lcd.println(TrinketKeyboard.getLEDstate());
+//    lcd.println((int)TrinketKeyboard.isConnected());
     lcd.print("     ");
     lcd.display();
+    TrinketKeyboard.poll();
     
     pinError = false;
-    for (indx = 0; indx < sizeof(pinCode)/2; indx++) {
+    for (indx = 0; indx < sizeof(pinCode); indx++) {
       pinDigit = 0;
       while (pinDigit == 0) {
         pinDigit = !digitalRead(BUTTON1)+(!digitalRead(BUTTON2)*2)+(!digitalRead(BUTTON3)*3)+(!digitalRead(BUTTON4)*4);
+        TrinketKeyboard.poll();
       }
-      delay(50);
-      while ((!digitalRead(BUTTON1)+(!digitalRead(BUTTON2)*2)+(!digitalRead(BUTTON3)*3)+(!digitalRead(BUTTON4)*4)) != 0);
-      delay(50);
+      pollDelay(50);
+      while ((!digitalRead(BUTTON1)+(!digitalRead(BUTTON2)*2)+(!digitalRead(BUTTON3)*3)+(!digitalRead(BUTTON4)*4)) != 0) {
+        TrinketKeyboard.poll();
+      }
+      pollDelay(50);
 
       lcd.print("*");
       lcd.display();
       if (pinDigit != pinCode[indx]) pinError = true;
     }
-    if (!pinError) pinMatch=true;
-    delay(500);
+    if (!pinError) {
+
+      testS = (TrinketKeyboard.getLEDstate() & KB_LED_CAPS);
+      if (testS != 0) {  // Check to see if Trinket thinks cap locks is on
+        lcd.clearDisplay();
+        lcd.println(" ");
+        lcd.println("Cap Locks On");
+        lcd.println(TrinketKeyboard.getLEDstate());
+        lcd.println((int)TrinketKeyboard.isConnected());
+        lcd.println("Cap Locks On");
+        lcd.display();
+        pollDelay(1000);
+      } else {
+        pinMatch=true;
+      }
+    }
+    
+    pollDelay(500);
   }
   
   lcd.clearDisplay();
-  lcd.print("   UNLOCKED");
+  lcd.println("   UNLOCKED");
+//  lcd.println(TrinketKeyboard.getLEDstate());
+//  lcd.println((int)TrinketKeyboard.isConnected());
   lcd.display();
-  delay(1000);
+  pollDelay(750);
 
   timeOutEnd = millis() + timeOutDelay;
   lcd.clearDisplay();
@@ -226,7 +467,7 @@ void loop() {
     lcd.println("Time-Out Lock");
     lcd.print(millis());
     lcd.display();
-    delay(1000);
+    pollDelay(1000);
     timeOutEnd = millis() + timeOutDelay;
   }
 
@@ -240,8 +481,9 @@ void loop() {
       pinDigit = 0;
       while (pinDigit == 0 && millis() < timeOutEnd) {
         pinDigit = !digitalRead(BUTTON1)+(!digitalRead(BUTTON2)*2)+(!digitalRead(BUTTON3)*3)+(!digitalRead(BUTTON4)*4);
+        TrinketKeyboard.poll();
       }
-      delay(50);
+      pollDelay(50);
       sendTab = true;
       screenScrolled = false;
       scrollTimeStart = millis();
@@ -254,7 +496,7 @@ void loop() {
             fillScreen(indx,6);
             userNameSent = false;
             selected = false;
-            delay(150);
+            pollDelay(25);
           }
 
           if (pinDigit == 2) {
@@ -263,15 +505,16 @@ void loop() {
             fillScreen(indx,6);
             userNameSent = false;
             selected = false;
-            delay(150);
+            pollDelay(25);
           }
         }
 
         if (millis() > scrollTimeStart+1000 && pinDigit == 3 && selected && !userNameSent) {
           sendTab = false;
         }
+        TrinketKeyboard.poll();
       }
-      delay(50);
+      pollDelay(50);
 
       if (screenScrolled) {
         newKeyNeeded = false;
@@ -307,10 +550,17 @@ void loop() {
 
       if (pinDigit == 3 && selected && !userNameSent && !newKeyNeeded) {
 //  Send Username Here
-        Keyboard.begin();
-        Keyboard.print(userName[indx]);
-        if (sendTab) Keyboard.write(0xB3);
-        Keyboard.end();
+//        TrinketKeyboard.print(userName[indx]);
+        for (short k=0;k<UNMLEN-1;k++) {
+          myChar = pgm_read_byte_near(userName[srtPointer[indx]] + k);
+          if (myChar != '\0') {
+            TrinketKeyboard.print(myChar);
+            pollDelay(50);
+          }
+        }
+//        if (sendTab) Keyboard.write(0xB3);
+        if (sendTab) TrinketKeyboard.print("\t");
+//        Keyboard.end();
         
         lcd.setCursor(0,18);
         lcd.print("Password...");
@@ -318,21 +568,25 @@ void loop() {
         userNameSent = true;
         newKeyNeeded = true;
 
+        TrinketKeyboard.poll();
         if (!sendTab) {
-          while ((!digitalRead(BUTTON1)+(!digitalRead(BUTTON2)*2)+(!digitalRead(BUTTON3)*3)+(!digitalRead(BUTTON4)*4)) != 0 && millis() < timeOutEnd) ;
+          while ((!digitalRead(BUTTON1)+(!digitalRead(BUTTON2)*2)+(!digitalRead(BUTTON3)*3)+(!digitalRead(BUTTON4)*4)) != 0 && millis() < timeOutEnd) {
+            TrinketKeyboard.poll();
+          }
         }
       }
     
       if (pinDigit == 3 && selected && userNameSent && !newKeyNeeded) {
 //  Send Password Here
-        Keyboard.begin();
- //       Keyboard.print(passWord[indx]);
+//       Keyboard.print(passWord[indx]);
         for (short k=0;k<PASLEN-1;k++) {
-          myChar = pgm_read_byte_near(passWord[indx] + k);
-          if (myChar != '\0') Keyboard.print(myChar);
-          delay((k % 3) * 25);  // make the password entry look a little more human (slower/random), required by Starbucks.com???
+          myChar = pgm_read_byte_near(passWord[srtPointer[indx]] + k);
+          if (myChar != '\0') {
+            TrinketKeyboard.print(myChar);
+            pollDelay((k % 3) * 25);  // make the password entry look a little more human (slower/random), required by Starbucks.com
+          }
         }
-        Keyboard.end();
+//        Keyboard.end();
         
 //        lcd.setCursor(0,1);
 //        lcd.print("            ");
@@ -342,8 +596,27 @@ void loop() {
       }
 
       if (pinDigit == 4) bothSent = true;
-
+      TrinketKeyboard.poll();
   }
-    
+  
+/*  
+  while (digitalRead(BUTTON1));
+  delay(100);
+  while (!digitalRead(BUTTON1));  
+
+  Keyboard.begin();
+  Keyboard.print("davidhunter@rocketmail.com");
+  Keyboard.end();
+
+  while (digitalRead(BUTTON1));
+  delay(100);
+  while (!digitalRead(BUTTON1));  
+  
+  Keyboard.begin();
+  Keyboard.print("xxxxxxxx");
+  Keyboard.end();
+*/
+
+  
 }
 
